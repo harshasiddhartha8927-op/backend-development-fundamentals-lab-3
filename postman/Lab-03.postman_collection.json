@@ -1,0 +1,202 @@
+{
+  "info": {
+    "name": "Lab 3 - REST API, query parameters, validation, debugging",
+    "description": "Success and failure checks for the Books API. Run requests in order; Create book stores bookId.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "bookId", "value": "" },
+    { "key": "missingBookId", "value": "999999" }
+  ],
+  "item": [
+    {
+      "name": "Create book - 201",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Postman API Book\",\n  \"author\": \"Test Author\",\n  \"price\": 29.99\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/books"
+      },
+      "event": [{
+        "listen": "test",
+        "script": {
+          "type": "text/javascript",
+          "exec": [
+            "pm.test('returns 201 with created book', function () {",
+            "  pm.response.to.have.status(201);",
+            "  const body = pm.response.json();",
+            "  pm.expect(body.message).to.be.a('string');",
+            "  pm.expect(body.data.title).to.eql('Postman API Book');",
+            "  pm.collectionVariables.set('bookId', body.data.id);",
+            "});"
+          ]
+        }
+      }]
+    },
+    {
+      "name": "List books - search, sort, price range, pagination",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/books?search_q=Postman&order_by=price&order=DESC&limit=5&offset=0&min_price=20&max_price=40"
+      },
+      "event": [{
+        "listen": "test",
+        "script": {
+          "type": "text/javascript",
+          "exec": [
+            "pm.test('returns filtered books', function () {",
+            "  pm.response.to.have.status(200);",
+            "  const body = pm.response.json();",
+            "  pm.expect(body.data).to.be.an('array');",
+            "  pm.expect(body.data[0].title).to.eql('Postman API Book');",
+            "});"
+          ]
+        }
+      }]
+    },
+    {
+      "name": "Get book - 200",
+      "request": { "method": "GET", "url": "{{baseUrl}}/books/{{bookId}}" },
+      "event": [{
+        "listen": "test",
+        "script": {
+          "type": "text/javascript",
+          "exec": [
+            "pm.test('returns the requested book', function () {",
+            "  pm.response.to.have.status(200);",
+            "  pm.expect(pm.response.json().data.id).to.eql(Number(pm.collectionVariables.get('bookId')));",
+            "});"
+          ]
+        }
+      }]
+    },
+    {
+      "name": "Update book - 200",
+      "request": {
+        "method": "PUT",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Updated Postman API Book\",\n  \"author\": \"Test Author\",\n  \"price\": 34.5\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/books/{{bookId}}"
+      },
+      "event": [{
+        "listen": "test",
+        "script": {
+          "type": "text/javascript",
+          "exec": [
+            "pm.test('returns the updated book', function () {",
+            "  pm.response.to.have.status(200);",
+            "  pm.expect(pm.response.json().data.title).to.eql('Updated Postman API Book');",
+            "});"
+          ]
+        }
+      }]
+    },
+    {
+      "name": "Reject missing title - 400",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"author\": \"Test Author\",\n  \"price\": 10\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/books"
+      },
+      "event": [{
+        "listen": "test",
+        "script": {
+          "type": "text/javascript",
+          "exec": [
+            "pm.test('returns a clear validation error', function () {",
+            "  pm.response.to.have.status(400);",
+            "  pm.expect(pm.response.json().message).to.be.a('string');",
+            "});"
+          ]
+        }
+      }]
+    },
+    {
+      "name": "Reject non-numeric price - 400",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Bad Price\",\n  \"author\": \"Test Author\",\n  \"price\": \"not-a-number\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/books"
+      },
+      "event": [{
+        "listen": "test",
+        "script": {
+          "type": "text/javascript",
+          "exec": [
+            "pm.test('rejects a non-numeric price', function () {",
+            "  pm.response.to.have.status(400);",
+            "  pm.expect(pm.response.json().message).to.include('price');",
+            "});"
+          ]
+        }
+      }]
+    },
+    {
+      "name": "Reject invalid sort column - 400",
+      "request": { "method": "GET", "url": "{{baseUrl}}/books?order_by=title%20DESC" },
+      "event": [{
+        "listen": "test",
+        "script": {
+          "type": "text/javascript",
+          "exec": [
+            "pm.test('rejects unapproved sort columns', function () {",
+            "  pm.response.to.have.status(400);",
+            "  pm.expect(pm.response.json().message).to.be.a('string');",
+            "});"
+          ]
+        }
+      }]
+    },
+    {
+      "name": "Get missing book - 404",
+      "request": { "method": "GET", "url": "{{baseUrl}}/books/{{missingBookId}}" },
+      "event": [{
+        "listen": "test",
+        "script": {
+          "type": "text/javascript",
+          "exec": [
+            "pm.test('returns 404 with JSON message', function () {",
+            "  pm.response.to.have.status(404);",
+            "  pm.expect(pm.response.json().message).to.eql('Book not found.');",
+            "});"
+          ]
+        }
+      }]
+    },
+    {
+      "name": "Delete book - 200",
+      "request": { "method": "DELETE", "url": "{{baseUrl}}/books/{{bookId}}" },
+      "event": [{
+        "listen": "test",
+        "script": {
+          "type": "text/javascript",
+          "exec": [
+            "pm.test('deletes the book', function () {",
+            "  pm.response.to.have.status(200);",
+            "  pm.expect(pm.response.json().message).to.include('deleted');",
+            "});"
+          ]
+        }
+      }]
+    }
+  ]
+}
